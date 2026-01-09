@@ -11,10 +11,6 @@ JWT_SECRET = "test-jwt-secret-key-minimum-32-characters-long-for-security"
 # Enable Pages Functions
 pages_build_output_dir = "."
 
-# Build configuration - installs dependencies for Functions
-[build]
-command = "cd functions && npm install"
-
 # Environment variables (set these in Cloudflare Dashboard)
 # ADMIN_PASSWORD - Admin authentication password
 # JWT_SECRET - Secret key for signing JWT tokens (minimum 32 characters)

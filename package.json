@@ -4,6 +4,7 @@
   "description": "A web-based restaurant selection application with spinning wheel interface",
   "type": "module",
   "scripts": {
+    "build": "cd functions && npm install",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

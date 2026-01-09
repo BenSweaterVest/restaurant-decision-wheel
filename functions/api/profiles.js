@@ -72,7 +72,7 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   // Verify authentication
-  if (!verifyAuth(request, env)) {
+  if (!(await verifyAuth(request, env))) {
     return errorResponse('Unauthorized', 401, env);
   }
 
@@ -141,7 +141,7 @@ export async function onRequestPut(context) {
   const { request, env } = context;
 
   // Verify authentication
-  if (!verifyAuth(request, env)) {
+  if (!(await verifyAuth(request, env))) {
     return errorResponse('Unauthorized', 401, env);
   }
 

@@ -1,7 +1,7 @@
 /**
  * Authentication API Endpoint
  *
- * Validates administrative credentials and issues session tokens with expiration.
+ * Validates administrative credentials and issues JWT tokens with expiration.
  *
  * Endpoint: POST /api/auth
  *
@@ -13,30 +13,79 @@
  * Response:
  * {
  *   "authenticated": boolean,
- *   "token": string (base64-encoded session token with timestamp)
+ *   "token": string (JWT token)
  * }
  *
  * Environment Variables:
  * - ADMIN_PASSWORD: Administrative authentication credential
+ * - JWT_SECRET: Secret key for signing JWT tokens (minimum 32 characters)
  *
  * Security Notes:
  * - Tokens expire after 1 hour
- * - Token includes timestamp for validation
- * - Consider implementing rate limiting in production
+ * - Uses HMAC-SHA256 for token signing
+ * - Rate limiting recommended in production
  */
 
-import { getCorsHeaders, errorResponse, successResponse } from './_shared.js';
+import jwt from '@tsndr/cloudflare-worker-jwt';
+import { getCorsHeaders, successResponse, checkRateLimit } from './_shared.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  // Apply rate limiting: 5 attempts per minute
+  const rateCheck = checkRateLimit(request, 5, 60000);
+  if (!rateCheck.allowed) {
+    return new Response(
+      JSON.stringify({
+        authenticated: false,
+        error: 'Too many authentication attempts. Please try again later.',
+        retryAfter: rateCheck.resetAt
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': Math.ceil((rateCheck.resetAt.getTime() - Date.now()) / 1000),
+          ...getCorsHeaders(env)
+        }
+      }
+    );
+  }
+
   try {
     const { password } = await request.json();
 
+    // Validate required environment variables
+    if (!env.JWT_SECRET) {
+      return new Response(
+        JSON.stringify({
+          authenticated: false,
+          error: 'Server configuration error: JWT_SECRET not set'
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCorsHeaders(env)
+          }
+        }
+      );
+    }
+
     // Validate credentials against environment configuration
     if (password === env.ADMIN_PASSWORD) {
-      // Generate session token with timestamp for expiration
-      const token = btoa(`${password}:${Date.now()}`);
+      // Generate secure session ID
+      const sessionId = crypto.randomUUID();
+
+      // Create JWT payload
+      const payload = {
+        sessionId: sessionId,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 hour expiration
+      };
+
+      // Sign JWT token
+      const token = await jwt.sign(payload, env.JWT_SECRET);
 
       return successResponse(
         {
@@ -46,10 +95,35 @@ export async function onRequestPost(context) {
         env
       );
     } else {
-      return errorResponse('Invalid password', 401, env);
+      return new Response(
+        JSON.stringify({
+          authenticated: false,
+          error: 'Invalid password'
+        }),
+        {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            ...getCorsHeaders(env)
+          }
+        }
+      );
     }
   } catch (error) {
-    return errorResponse('Invalid request', 400, env);
+    console.error('Authentication error:', error);
+    return new Response(
+      JSON.stringify({
+        authenticated: false,
+        error: 'Invalid request'
+      }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getCorsHeaders(env)
+        }
+      }
+    );
   }
 }
 

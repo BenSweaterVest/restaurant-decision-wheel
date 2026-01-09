@@ -37,7 +37,7 @@ export async function onRequestDelete(context) {
   const { request, env, params } = context;
 
   // Verify authentication
-  if (!verifyAuth(request, env)) {
+  if (!(await verifyAuth(request, env))) {
     return errorResponse('Unauthorized', 401, env);
   }
 

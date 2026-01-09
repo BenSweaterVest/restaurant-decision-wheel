@@ -114,11 +114,17 @@ Navigate to Settings → Environment variables and configure the following:
 | Variable         | Value                 | Description                                                         |
 | ---------------- | --------------------- | ------------------------------------------------------------------- |
 | `ADMIN_PASSWORD` | User-defined string   | Authentication credential for admin panel access                    |
+| `JWT_SECRET`     | Random string (32+ chars) | Secret key for signing JWT tokens (generate using secure random method) |
 | `GITHUB_TOKEN`   | GitHub PAT            | Personal access token for repository API operations                 |
 | `GITHUB_REPO`    | `username/repository` | Target repository in owner/name format                              |
 | `GITHUB_BRANCH`  | Branch name           | Target branch for data persistence (e.g., "main" or feature branch) |
 
 Ensure all variables are marked as encrypted for security purposes.
+
+**Generating JWT_SECRET**: Use a cryptographically secure random string of at least 32 characters. Example generation methods:
+- Node.js: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+- OpenSSL: `openssl rand -hex 32`
+- Online: Use a reputable password generator with 32+ character length
 
 **Deployment Execution**
 
@@ -141,6 +147,7 @@ wrangler pages deploy . --project-name=restaurant-picker
 
 # Configure environment secrets
 wrangler pages secret put ADMIN_PASSWORD
+wrangler pages secret put JWT_SECRET
 wrangler pages secret put GITHUB_TOKEN
 wrangler pages secret put GITHUB_REPO
 wrangler pages secret put GITHUB_BRANCH
@@ -417,9 +424,11 @@ The application implements multiple security layers to protect data and prevent 
 **Authentication and Authorization:**
 
 - Administrative credentials stored as encrypted environment variables in Cloudflare
+- JWT (JSON Web Token) authentication with HMAC-SHA256 signing
+- Tokens expire after 1 hour for enhanced security
+- Rate limiting on authentication endpoint (5 attempts per minute)
 - GitHub API token stored as encrypted secret
-- Token-based authentication for session management
-- Authentication required for all write operations (POST, DELETE)
+- Authentication required for all write operations (POST, PUT, DELETE)
 
 **Input Validation and Sanitization:**
 

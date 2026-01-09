@@ -7,22 +7,24 @@
  * @module api/_shared
  */
 
+import jwt from '@tsndr/cloudflare-worker-jwt';
+
 const RESTAURANT_FILE = 'restaurants.json';
 
 /**
- * Verify authentication token from request headers
- * Decodes Bearer token and validates against admin password
+ * Verify JWT authentication token from request headers
+ * Validates token signature and expiration
  *
  * @param {Request} request - Incoming request object with Authorization header
- * @param {Object} env - Environment variables containing ADMIN_PASSWORD
- * @returns {boolean} - True if authenticated, false otherwise
+ * @param {Object} env - Environment variables containing JWT_SECRET
+ * @returns {Promise<boolean>} - True if authenticated, false otherwise
  *
  * @example
- * if (!verifyAuth(request, env)) {
+ * if (!(await verifyAuth(request, env))) {
  *   return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
  * }
  */
-export function verifyAuth(request, env) {
+export async function verifyAuth(request, env) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return false;
@@ -30,22 +32,9 @@ export function verifyAuth(request, env) {
 
   const token = authHeader.substring(7);
   try {
-    const decoded = atob(token);
-    const [password, timestamp] = decoded.split(':');
-
-    // Verify password matches
-    if (password !== env.ADMIN_PASSWORD) {
-      return false;
-    }
-
-    // Check token age (1 hour expiration for security)
-    const tokenAge = Date.now() - parseInt(timestamp);
-    const ONE_HOUR = 3600000;
-    if (tokenAge > ONE_HOUR) {
-      return false;
-    }
-
-    return true;
+    // Verify JWT signature and expiration
+    const isValid = await jwt.verify(token, env.JWT_SECRET);
+    return isValid;
   } catch {
     return false;
   }
@@ -142,7 +131,9 @@ export async function updateGitHub(env, content, sha, message) {
  * });
  */
 export function getCorsHeaders(env) {
-  // TODO: In production, restrict to specific origins
+  // For production deployments, set ALLOWED_ORIGIN environment variable
+  // to restrict access to specific domains (e.g., 'https://yourdomain.com')
+  // Default allows all origins for development flexibility
   const allowedOrigin = env.ALLOWED_ORIGIN || '*';
 
   return {
@@ -340,5 +331,75 @@ export function validateRestaurantData(restaurant) {
   return {
     valid: errors.length === 0,
     errors: errors
+  };
+}
+
+/**
+ * Simple in-memory rate limiter for API endpoints
+ * Uses IP address to track request rates
+ *
+ * Note: For production with multiple instances, consider using Cloudflare Workers KV
+ * or Durable Objects for distributed rate limiting.
+ *
+ * @param {Request} request - Incoming request object
+ * @param {number} maxRequests - Maximum requests allowed in time window (default: 10)
+ * @param {number} windowMs - Time window in milliseconds (default: 60000 = 1 minute)
+ * @returns {Object} - { allowed: boolean, remaining: number, resetAt: Date }
+ *
+ * @example
+ * const rateCheck = checkRateLimit(request, 5, 60000);
+ * if (!rateCheck.allowed) {
+ *   return errorResponse('Rate limit exceeded', 429, env);
+ * }
+ */
+const rateLimitStore = new Map();
+
+export function checkRateLimit(request, maxRequests = 10, windowMs = 60000) {
+  const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const now = Date.now();
+  const key = `${clientIp}`;
+
+  // Clean up expired entries periodically
+  if (rateLimitStore.size > 10000) {
+    for (const [k, v] of rateLimitStore.entries()) {
+      if (now > v.resetAt) {
+        rateLimitStore.delete(k);
+      }
+    }
+  }
+
+  // Get or create rate limit entry
+  let entry = rateLimitStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    // Create new entry or reset expired one
+    entry = {
+      count: 1,
+      resetAt: now + windowMs
+    };
+    rateLimitStore.set(key, entry);
+
+    return {
+      allowed: true,
+      remaining: maxRequests - 1,
+      resetAt: new Date(entry.resetAt)
+    };
+  }
+
+  // Increment request count
+  entry.count++;
+
+  if (entry.count > maxRequests) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt: new Date(entry.resetAt)
+    };
+  }
+
+  return {
+    allowed: true,
+    remaining: maxRequests - entry.count,
+    resetAt: new Date(entry.resetAt)
   };
 }

@@ -4,7 +4,6 @@
   "description": "A web-based restaurant selection application with spinning wheel interface",
   "type": "module",
   "scripts": {
-    "build": "cd functions && npm install",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
@@ -33,9 +32,7 @@
     "url": "https://github.com/BenSweaterVest/restaurant-decision-wheel/issues"
   },
   "homepage": "https://github.com/BenSweaterVest/restaurant-decision-wheel#readme",
-  "dependencies": {
-    "@tsndr/cloudflare-worker-jwt": "^2.4.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.5.0",
     "@vitest/coverage-v8": "^2.1.9",

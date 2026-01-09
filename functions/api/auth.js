@@ -26,7 +26,7 @@
  * - Rate limiting recommended in production
  */
 
-import jwt from '@tsndr/cloudflare-worker-jwt';
+import { sign } from './jwt-helper.js';
 import { getCorsHeaders, successResponse, checkRateLimit } from './_shared.js';
 
 export async function onRequestPost(context) {
@@ -85,7 +85,7 @@ export async function onRequestPost(context) {
       };
 
       // Sign JWT token
-      const token = await jwt.sign(payload, env.JWT_SECRET);
+      const token = await sign(payload, env.JWT_SECRET);
 
       return successResponse(
         {

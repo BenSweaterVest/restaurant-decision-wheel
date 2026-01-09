@@ -7,7 +7,7 @@
  * @module api/_shared
  */
 
-import jwt from '@tsndr/cloudflare-worker-jwt';
+import { verify } from './jwt-helper.js';
 
 const RESTAURANT_FILE = 'restaurants.json';
 
@@ -33,7 +33,7 @@ export async function verifyAuth(request, env) {
   const token = authHeader.substring(7);
   try {
     // Verify JWT signature and expiration
-    const isValid = await jwt.verify(token, env.JWT_SECRET);
+    const isValid = await verify(token, env.JWT_SECRET);
     return isValid;
   } catch {
     return false;

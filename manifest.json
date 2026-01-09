@@ -1,0 +1,21 @@
+{
+  "name": "Restaurant Decision Wheel",
+  "short_name": "Restaurant Wheel",
+  "description": "Spin the wheel to decide where to eat! A fun and easy way to choose restaurants.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://thesweatervest.com/wp-content/uploads/2025/02/SweaterVest-Solutions-WIDECROP-300x300.png",
+      "sizes": "300x300",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "lifestyle", "entertainment"],
+  "lang": "en-US",
+  "dir": "ltr"
+}

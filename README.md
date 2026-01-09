@@ -103,7 +103,7 @@ The application supports direct profile access via URL paths, making it easy to 
 **Build Configuration**
 
 - Framework preset: `None`
-- Build command: (leave empty)
+- Build command: `cd functions && npm install`
 - Build output directory: `/`
 - Root directory: `/`
 

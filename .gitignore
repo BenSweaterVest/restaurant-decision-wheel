@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Environment files
+.env
+.dev.vars
+
+# Wrangler files
+.wrangler/
+wrangler.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build artifacts
+dist/
